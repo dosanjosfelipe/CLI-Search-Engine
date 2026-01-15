@@ -4,6 +4,7 @@ import me.search.indexing.FileScanner;
 import me.search.core.Searcher;
 import me.search.ranking.ScoreCalculator;
 import me.search.text.PipelineFormatter;
+import me.search.utils.NameFormatter;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -11,6 +12,7 @@ import java.util.*;
 
 public class ArgumentParser {
     PipelineFormatter pipelineFormatter = new PipelineFormatter();
+    NameFormatter nameFormatter = new NameFormatter();
     public void parse(String[] args) throws IOException {
         PipelineFormatter formatterApplier = new PipelineFormatter();
         ScoreCalculator scoreCalculator = new ScoreCalculator();
@@ -56,12 +58,16 @@ public class ArgumentParser {
         Map<String, List<Integer>> rootCounter = searcher.argsCounter(rootArgs, rootTextHash);
         Map<String, List<Integer>> perfectCounter = searcher.argsCounter(perfectArgs, perfectTextHash);
 
-        // -------------------- TERMINAL ---------------------
+        String ANSI_RESET = "\u001B[0m";
+        String ANSI_RED = "\u001B[31m";
+        String ANSI_YELLOW = "\u001B[33m";
+        String ANSI_GREEN = "\u001B[32m";
+
+// -------------------- TERMINAL ---------------------
         if (!fileHash.isEmpty()) {
             Map<String, Double> score = scoreCalculator.rankingTFIDF(rootArgs, perfectArgs,
                     rootTextHash, perfectTextHash, rootCounter, perfectCounter);
 
-            double maxRawScore = Collections.max(score.values());
             int LIMIT_NAME = 40;
 
             System.out.println("\n----------------------- RESULTS -----------------------");
@@ -71,31 +77,31 @@ public class ArgumentParser {
             score.entrySet().stream()
                     .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                     .forEach(entry -> {
-                        String fullPath = entry.getKey();
-                        String fileName = Paths.get(fullPath).getFileName().toString();
+                        String fileName = Paths.get(entry.getKey()).getFileName().toString();
+                        String name = nameFormatter.formatFileName(fileName, LIMIT_NAME);
 
-                        // 1. Limita o nome do arquivo
-                        String nomeExibicao = formatFileName(fileName, LIMIT_NAME);
+                        double grade = entry.getValue();
+                        if (grade > 1000) grade = 1000.0;
 
-                        // 2. Calcula a nota (0 a 100)
-                        double nota = (maxRawScore > 0) ? (entry.getValue() / maxRawScore) * 100 : 0;
+                        // Lógica de Seleção de Cor
+                        String color;
+                        if (grade <= 300) {
+                            color = ANSI_RED;
+                        } else if (grade <= 699) {
+                            color = ANSI_YELLOW;
+                        } else {
+                            color = ANSI_GREEN;
+                        }
 
-
-                        System.out.printf("%-40s | %6.2f%%%n", nomeExibicao, nota);
-
+                        System.out.printf("%-40s | %s%7.2f pts%s%n", name, color, grade, ANSI_RESET);
                     });
             System.out.println("-------------------------------------------------------");
+            System.out.println(" ");
         } else {
             System.out.println(" ");
             System.out.println("There are no files to read here.");
             System.out.println(" ");
         }
     }
-    public String formatFileName(String name, int limit) {
-        if (name.length() <= limit) {
-            return name;
-        }
-        // Corta o nome e adiciona reticências
-        return name.substring(0, limit - 3) + "...";
-    }
+
 }

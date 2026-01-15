@@ -17,15 +17,10 @@ public class Searcher {
 
 
 
+
             for (String arg : args) {
                 long count = entry.getValue().stream().filter(token -> token.equals(arg)).count();
                 countersList.add((int) count);
-
-                if (entry.getKey().contains("Introdução APS")) {
-                    System.out.println(args + "||||||||||" + arg);
-                    System.out.println("DEBUG: Lendo arquivo: " + entry.getKey());
-                    System.out.println("DEBUG: Total de termos no mapa deste arquivo: " + count);
-                }
             }
 
             countMap.put(entry.getKey(), countersList);

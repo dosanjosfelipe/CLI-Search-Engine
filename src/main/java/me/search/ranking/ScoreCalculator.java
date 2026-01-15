@@ -2,8 +2,6 @@ package me.search.ranking;
 
 import me.search.core.Searcher;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,29 +21,62 @@ public class ScoreCalculator {
         int totalDocs = rootTextHash.size();
         Map<String, Double> scores = new HashMap<>();
 
-        // 1. Calcular DFs separados
-        Map<String, Integer> rootDFs = searcher.getDocFrequencies(rootArgs, rootTextHash);
-        Map<String, Integer> perfectDFs = searcher.getDocFrequencies(perfectArgs, perfectTextHash);
+        // DF calculado apenas sobre os termos raiz (correto)
+        Map<String, Integer> rootDFs =
+                searcher.getDocFrequencies(rootArgs, rootTextHash);
+
+        // Comprimento médio real dos documentos
+        double avgLength = rootTextHash.values().stream()
+                .mapToInt(List::size)
+                .average()
+                .orElse(1.0);
+
+        final double k = 1.5;
+        final double b = 0.75;
 
         for (String fileName : perfectTextHash.keySet()) {
-            double tempScore = 0.0;
-            List<Integer> pCounts = perfectCounters.get(fileName);
-            List<Integer> rCounts = rootCounters.get(fileName);
+
+            double score = 0.0;
+
+            List<Integer> perfectCounts = perfectCounters.get(fileName);
+            List<Integer> rootCounts = rootCounters.get(fileName);
+
+            int docLength = rootTextHash.get(fileName).size();
+
+            double lengthNorm = 1.0 - b + b * (docLength / avgLength);
 
             for (int i = 0; i < perfectArgs.size(); i++) {
-                // TF e IDF para o termo exato
-                int tfPerfect = pCounts.get(i);
-                double idfPerfect = Math.log((double) totalDocs / (perfectDFs.get(perfectArgs.get(i)) + 1));
 
-                // TF e IDF para a raiz
-                int tfRoot = rCounts.get(i);
-                double idfRoot = Math.log((double) totalDocs / (rootDFs.get(rootArgs.get(i)) + 1));
+                int tfPerfect = perfectCounts.get(i);
+                int tfRoot = rootCounts.get(i);
 
-                // Soma ponderada com IDFs distintos
-                tempScore += ((tfPerfect * idfPerfect * 1.0) + (tfRoot * idfRoot * 0.5));
+                if (tfPerfect == 0 && tfRoot == 0) {
+                    continue;
+                }
+
+                double tfPerfectBM25 =
+                        (tfPerfect * (k + 1.0)) /
+                                (tfPerfect + k * lengthNorm);
+
+                double tfRootBM25 =
+                        (tfRoot * (k + 1.0)) /
+                                (tfRoot + k * lengthNorm);
+
+                double tfCombined =
+                        (2.0 * tfPerfectBM25) +
+                                (tfRootBM25);
+
+                int df = rootDFs.getOrDefault(rootArgs.get(i), 0);
+                double idf = Math.log(1.0 + (double) totalDocs / (1.0 + df));
+
+                score += (tfCombined * idf) * 60;
             }
-            scores.put(fileName, tempScore);
+
+            score /= perfectArgs.size();
+
+            scores.put(fileName, score);
         }
+
         return scores;
     }
 }
