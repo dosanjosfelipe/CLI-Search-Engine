@@ -23,9 +23,9 @@ public class FileScanner {
         return filesPath;
     }
 
-    public Map<String, String> readFilesBase() throws IOException {
+    public Map<String, List<String>> readFilesBase() throws IOException {
         List<String> filesPath = listFiles();
-        Map<String, String> filesHash = new HashMap<>();
+        Map<String, List<String>> filesHash = new HashMap<>();
         Readers readers = new Readers();
 
         for (String path : filesPath) {
@@ -33,28 +33,20 @@ public class FileScanner {
             File file = new File(path);
 
             if (FileVerification.isPdfFile(file)) {
-                String text = readers.pdfReader(file);
-                filesHash.put(path, text);
+                filesHash.put(path, readers.pdfReader(file));
 
             } else if (FileVerification.isJsonFile(file)) {
-                String text = readers.jsonReader(file);
 
-                String formattedText = text.replace("{", "").replace("}", "")
-                        .replace(":", " ");
-
-                filesHash.put(path, formattedText);
+                filesHash.put(path, readers.jsonReader(file));
 
             } else if (FileVerification.isDocxFile(file)) {
-                String text = readers.docxReader(file);
-                filesHash.put(path, text);
+                filesHash.put(path, readers.docxReader(file));
 
             } else if (FileVerification.isHtmlFile(file)) {
-                String text = readers.htmlReader(file);
-                filesHash.put(path, text);
+                filesHash.put(path, readers.htmlReader(file));
 
             } else if (FileVerification.isTextFile(file)){
-                String text = readers.txtReader(file);
-                filesHash.put(path, text);
+                filesHash.put(path, readers.txtReader(file));
 
             }
         }

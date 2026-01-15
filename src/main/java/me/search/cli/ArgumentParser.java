@@ -1,20 +1,21 @@
 package me.search.cli;
 
 import me.search.indexing.FileScanner;
-import me.search.ranking.Search;
+import me.search.core.Searcher;
+import me.search.ranking.ScoreCalculator;
 import me.search.text.PipelineFormatter;
+
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ArgumentParser {
-
+    PipelineFormatter pipelineFormatter = new PipelineFormatter();
     public void parse(String[] args) throws IOException {
         PipelineFormatter formatterApplier = new PipelineFormatter();
+        ScoreCalculator scoreCalculator = new ScoreCalculator();
         FileScanner fileScanner = new FileScanner();
-        Search search = new Search();
+        Searcher searcher = new Searcher();
 
         // -------------------- ARGS ---------------------
         if (args.length == 0) {
@@ -22,10 +23,11 @@ public class ArgumentParser {
             return;
         }
 
-        List<String> formattedArgs = formatterApplier.apply(args);
+        List<String> rootArgs = formatterApplier.apply(List.of(args), true);
+        List<String> perfectArgs = formatterApplier.apply(List.of(args), false);
 
-        if (formattedArgs.isEmpty()) {
-            System.out.print("Use: search <args> with valid args");
+        if (rootArgs.isEmpty()) {
+            System.out.print("Use: search <args> with valid terms");
             return;
         }
 
@@ -37,36 +39,63 @@ public class ArgumentParser {
 
         String searchTerms = query.toString().trim();
 
-        // -------------------- TEXTS ---------------------
-        Map<String, String> fileHash = fileScanner.readFilesBase();
+        Map<String, List<String>> fileHash = fileScanner.readFilesBase();
 
-        Map<String, String> textHash = new HashMap<>();
+        Map<String, List<String>> rootTextHash = new HashMap<>();
+        Map<String, List<String>> perfectTextHash = new HashMap<>();
 
-        for (Map.Entry<String, String> entry : fileHash.entrySet()) {
-            List<String> formattedText = formatterApplier.apply(entry.getValue().split("\\s+"));
+        for (Map.Entry<String, List<String>> entry : fileHash.entrySet()) {
+            List<String> formattedStemText = pipelineFormatter.apply(entry.getValue(), true);
+            List<String> formattedText = pipelineFormatter.apply(entry.getValue(), false);
 
-            textHash.put(entry.getKey(), formattedText.toString());
+            rootTextHash.put(entry.getKey(), formattedStemText);
+            perfectTextHash.put(entry.getKey(), formattedText);
         }
+
+
+        Map<String, List<Integer>> rootCounter = searcher.argsCounter(rootArgs, rootTextHash);
+        Map<String, List<Integer>> perfectCounter = searcher.argsCounter(perfectArgs, perfectTextHash);
 
         // -------------------- TERMINAL ---------------------
         if (!fileHash.isEmpty()) {
-            System.out.println(" ");
-            System.out.println("You're searching by: " + searchTerms);
-            System.out.println(" ");
-            System.out.println("This is the count of args: ");
+            Map<String, Double> score = scoreCalculator.rankingTFIDF(rootArgs, perfectArgs,
+                    rootTextHash, perfectTextHash, rootCounter, perfectCounter);
 
-            Map<String, List<Integer>> counterMap = search.argsCounter(formattedArgs, textHash);
+            double maxRawScore = Collections.max(score.values());
+            int LIMIT_NAME = 40;
 
-            for (Map.Entry<String, List<Integer>> entry : counterMap.entrySet()) {
-                String FileName = Paths.get(entry.getKey()).getFileName().toString();
+            System.out.println("\n----------------------- RESULTS -----------------------");
+            System.out.printf("%-40s | %s%n", "File Name", "Relevance");
+            System.out.println("-------------------------------------------------------");
 
-                System.out.println("Has " + entry.getValue() + " words like that in " + FileName);
-            }
-            System.out.println(" ");
+            score.entrySet().stream()
+                    .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                    .forEach(entry -> {
+                        String fullPath = entry.getKey();
+                        String fileName = Paths.get(fullPath).getFileName().toString();
+
+                        // 1. Limita o nome do arquivo
+                        String nomeExibicao = formatFileName(fileName, LIMIT_NAME);
+
+                        // 2. Calcula a nota (0 a 100)
+                        double nota = (maxRawScore > 0) ? (entry.getValue() / maxRawScore) * 100 : 0;
+
+
+                        System.out.printf("%-40s | %6.2f%%%n", nomeExibicao, nota);
+
+                    });
+            System.out.println("-------------------------------------------------------");
         } else {
             System.out.println(" ");
             System.out.println("There are no files to read here.");
             System.out.println(" ");
         }
+    }
+    public String formatFileName(String name, int limit) {
+        if (name.length() <= limit) {
+            return name;
+        }
+        // Corta o nome e adiciona reticências
+        return name.substring(0, limit - 3) + "...";
     }
 }

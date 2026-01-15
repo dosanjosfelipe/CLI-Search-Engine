@@ -5,13 +5,17 @@ import java.util.List;
 
 public class PipelineFormatter {
 
-    public List<String> apply(String[] text) {
+    public List<String> apply(List<String> text, boolean stem) {
         Formatter formatter = new Formatter();
 
         List<String> normalizedText = formatter.normalizer(text);
-
         List<String> noStopWordsText = formatter.stopWords(normalizedText);
 
-        return formatter.stem(noStopWordsText);
+        if (stem) {
+            return formatter.stem(noStopWordsText);
+        } else {
+            return noStopWordsText;
+        }
+
     }
 }

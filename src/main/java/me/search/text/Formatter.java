@@ -9,7 +9,7 @@ import org.tartarus.snowball.ext.PortugueseStemmer;
 
 class Formatter {
 
-    List<String> normalizer(String[] text) {
+    List<String> normalizer(List<String> text) {
 
         List<String> normalizedWords = new ArrayList<>();
         for (String word : text) {
