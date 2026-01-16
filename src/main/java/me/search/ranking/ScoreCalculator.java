@@ -21,17 +21,15 @@ public class ScoreCalculator {
         int totalDocs = rootTextHash.size();
         Map<String, Double> scores = new HashMap<>();
 
-        // DF calculado apenas sobre os termos raiz (correto)
         Map<String, Integer> rootDFs =
                 searcher.getDocFrequencies(rootArgs, rootTextHash);
 
-        // Comprimento médio real dos documentos
         double avgLength = rootTextHash.values().stream()
                 .mapToInt(List::size)
                 .average()
                 .orElse(1.0);
 
-        final double k = 1.5;
+        final double k = 2.0;
         final double b = 0.75;
 
         for (String fileName : perfectTextHash.keySet()) {
@@ -40,10 +38,9 @@ public class ScoreCalculator {
 
             List<Integer> perfectCounts = perfectCounters.get(fileName);
             List<Integer> rootCounts = rootCounters.get(fileName);
+            List<String> docTokens = rootTextHash.get(fileName);
 
-            int docLength = rootTextHash.get(fileName).size();
-
-            double lengthNorm = 1.0 - b + b * (docLength / avgLength);
+            double lengthNorm = 1.0 - b + b * (docTokens.size() / avgLength);
 
             for (int i = 0; i < perfectArgs.size(); i++) {
 
@@ -54,22 +51,16 @@ public class ScoreCalculator {
                     continue;
                 }
 
-                double tfPerfectBM25 =
-                        (tfPerfect * (k + 1.0)) /
-                                (tfPerfect + k * lengthNorm);
+                double tfPerfectBM25 = (tfPerfect * (k + 1.0)) / (tfPerfect + k * lengthNorm);
 
-                double tfRootBM25 =
-                        (tfRoot * (k + 1.0)) /
-                                (tfRoot + k * lengthNorm);
+                double tfRootBM25 = (tfRoot * (k + 1.0)) / (tfRoot + k * lengthNorm);
 
-                double tfCombined =
-                        (2.0 * tfPerfectBM25) +
-                                (tfRootBM25);
+                double tfCombined = (2.0 * tfPerfectBM25) + (tfRootBM25);
 
                 int df = rootDFs.getOrDefault(rootArgs.get(i), 0);
                 double idf = Math.log(1.0 + (double) totalDocs / (1.0 + df));
 
-                score += (tfCombined * idf) * 60;
+                score += (tfCombined * idf) * 62;
             }
 
             score /= perfectArgs.size();

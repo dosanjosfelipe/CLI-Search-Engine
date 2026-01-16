@@ -1,36 +1,45 @@
 package me.search.core;
 
-import me.search.text.PipelineFormatter;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Searcher {
 
-    public Map<String, List<Integer>> argsCounter(List<String> args, Map<String, List<String>> fileHash) {
+    public Map<String, List<Integer>> countTermFrequency(List<String> args, Map<String, List<String>> fileHash) {
         Map<String, List<Integer>> countMap = new HashMap<>();
 
-        for (Map.Entry<String, List<String>> entry : fileHash.entrySet()) {
-            List<Integer> countersList = new ArrayList<>();
+        for (var entry : fileHash.entrySet()) {
+            Map<String, Integer> freq = new HashMap<>();
 
-            for (String arg : args) {
-                long count = entry.getValue().stream().filter(token -> token.equals(arg)).count();
-                countersList.add((int) count);
+            for (String token : entry.getValue()) {
+                freq.merge(token, 1, Integer::sum);
             }
-            countMap.put(entry.getKey(), countersList);
+
+            List<Integer> docCounts = new ArrayList<>();
+            for (String arg : args) {
+                docCounts.add(freq.getOrDefault(arg, 0));
+            }
+            countMap.put(entry.getKey(), docCounts);
         }
         return countMap;
     }
 
     public Map<String, Integer> getDocFrequencies(List<String> args, Map<String, List<String>> fileHash) {
         Map<String, Integer> dfMap = new HashMap<>();
+
         for (String arg : args) {
-            int df = (int) fileHash.values().stream()
-                    .filter(tokens -> tokens.contains(arg))
-                    .count();
-            dfMap.put(arg, df);
+            dfMap.put(arg, 0);
+        }
+
+        for (var entry : fileHash.entrySet()) {
+
+            Set<String> uniqueTokens =
+                    new HashSet<>(entry.getValue());
+
+            for (String token : uniqueTokens) {
+                if (dfMap.containsKey(token)) {
+                    dfMap.merge(token, 1, Integer::sum);
+                }
+            }
         }
         return dfMap;
     }

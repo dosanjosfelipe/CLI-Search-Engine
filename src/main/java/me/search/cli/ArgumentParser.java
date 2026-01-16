@@ -31,6 +31,8 @@ public class ArgumentParser {
             System.out.print("Use: search <args> with valid terms");
             return;
         }
+        System.out.print(" - Wait a minute...");
+        System.out.flush();
 
         Map<String, List<String>> fileHash = fileScanner.readFilesBase();
         Map<String, List<String>> rootTextHash = new HashMap<>();
@@ -44,15 +46,19 @@ public class ArgumentParser {
             perfectTextHash.put(entry.getKey(), formattedText);
         }
 
-        Map<String, List<Integer>> rootCounter = searcher.argsCounter(rootArgs, rootTextHash);
-        Map<String, List<Integer>> perfectCounter = searcher.argsCounter(perfectArgs, perfectTextHash);
+        Map<String, List<Integer>> rootCounter = searcher.countTermFrequency(rootArgs, rootTextHash);
+        Map<String, List<Integer>> perfectCounter = searcher.countTermFrequency(perfectArgs, perfectTextHash);
 
 // -------------------- TERMINAL ---------------------
         if (!fileHash.isEmpty()) {
+
+
             Map<String, Double> score = scoreCalculator.rankingTFIDF(rootArgs, perfectArgs,
                     rootTextHash, perfectTextHash, rootCounter, perfectCounter);
 
             int LIMIT_NAME = 40;
+
+            System.out.print("\r" + " ".repeat(20) + "\r");
 
             System.out.println("\n----------------------- RESULTS -----------------------");
             System.out.printf("%-40s | %s%n", "File Name", "Relevance");

@@ -1,33 +1,25 @@
 package me.search.indexing;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.*;
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.charset.CodingErrorAction;
+import java.nio.*;
+import java.nio.charset.*;
 import java.util.zip.ZipFile;
 
 class FileVerification {
-    private static final int PDF_HEADER_SIZE = 5;
-    private static final int TEXT_MAX_BYTES = 8192;
-    private static final int HTML_MAX_BYTES = 2048;
+
+    private static final byte[] PDF_MAGIC = "%PDF-".getBytes(StandardCharsets.US_ASCII);
+    private static final int TEXT_SAMPLE = 4096;
+    private static final int HTML_SAMPLE = 1024;
 
     /* ===================== PDF ===================== */
 
     static boolean isPdfFile(File file) {
         try (InputStream in = new FileInputStream(file)) {
 
-            byte[] header = new byte[PDF_HEADER_SIZE];
-            int read = in.read(header);
-
-            if (read != PDF_HEADER_SIZE) {
-                return false;
-            }
-
-            return "%PDF-".equals(
-                    new String(header, StandardCharsets.US_ASCII)
-            );
+            byte[] buf = new byte[PDF_MAGIC.length];
+            return in.read(buf) == buf.length &&
+                    java.util.Arrays.equals(buf, PDF_MAGIC);
 
         } catch (IOException e) {
             return false;
@@ -39,28 +31,21 @@ class FileVerification {
     static boolean isTextFile(File file) {
         try (InputStream in = new FileInputStream(file)) {
 
-            byte[] buffer = new byte[TEXT_MAX_BYTES];
-            int read = in.read(buffer);
+            byte[] buf = in.readNBytes(TEXT_SAMPLE);
 
-            if (read <= 0) {
-                return true;
+            for (byte b : buf) {
+                if (b == 0x00) return false;
             }
 
-            for (int i = 0; i < read; i++) {
-                if (buffer[i] == 0x00) {
-                    return false;
-                }
-            }
-
-            StandardCharsets.UTF_8
+            CharsetDecoder decoder = StandardCharsets.UTF_8
                     .newDecoder()
                     .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(buffer, 0, read));
+                    .onUnmappableCharacter(CodingErrorAction.REPORT);
 
+            decoder.decode(ByteBuffer.wrap(buf));
             return true;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             return false;
         }
     }
@@ -70,18 +55,10 @@ class FileVerification {
     static boolean isHtmlFile(File file) {
         try (InputStream in = new FileInputStream(file)) {
 
-            byte[] buffer = new byte[HTML_MAX_BYTES];
-            int read = in.read(buffer);
+            byte[] buf = in.readNBytes(HTML_SAMPLE);
+            String s = new String(buf, StandardCharsets.UTF_8).toLowerCase();
 
-            if (read <= 0) {
-                return false;
-            }
-
-            String start = new String(buffer, 0, read, StandardCharsets.UTF_8)
-                    .toLowerCase();
-
-            return start.contains("<!doctype html")
-                    || start.contains("<html");
+            return s.contains("<html") || s.contains("<!doctype html");
 
         } catch (IOException e) {
             return false;
@@ -91,13 +68,9 @@ class FileVerification {
     /* ===================== JSON ===================== */
 
     static boolean isJsonFile(File file) {
-        try (JsonParser parser = new JsonFactory().createParser(file)) {
+        try (JsonParser p = new JsonFactory().createParser(file)) {
 
-            while (parser.nextToken() != null) {
-
-            }
-
-            return true;
+            return p.nextToken() != null;
 
         } catch (IOException e) {
             return false;
@@ -106,21 +79,14 @@ class FileVerification {
 
     /* ===================== DOCX ===================== */
 
-    static boolean isDocxFile(File file) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] signature = new byte[4];
-            if (fis.read(signature) != 4) return false;
-
-            if (signature[0] != 0x50 || signature[1] != 0x4B)
-                return false;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
+    static boolean isDocxFile(File file) {
         try (ZipFile zip = new ZipFile(file)) {
 
             return zip.getEntry("[Content_Types].xml") != null &&
                     zip.getEntry("word/document.xml") != null;
+
+        } catch (IOException e) {
+            return false;
         }
     }
 }
