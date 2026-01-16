@@ -1,13 +1,9 @@
 package me.search.indexing;
 
-import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
-import org.slf4j.Logger;
 
 public class FileScanner {
-
-    private static final Logger logger = LoggerFactory.getLogger(FileScanner.class);
 
     public List<String> listFiles() {
         File folder = new File(System.getProperty("user.dir"));
@@ -53,9 +49,8 @@ public class FileScanner {
                 }
             }
         } catch (IOException e) {
-            logger.error("Fail to read the file", e);
+            System.out.println("Fail to read the file: " + e);
         }
-
         return filesHash;
     }
 }

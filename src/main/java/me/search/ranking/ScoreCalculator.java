@@ -10,7 +10,7 @@ public class ScoreCalculator {
 
     private final Searcher searcher = new Searcher();
 
-    public Map<String, Double> rankingTFIDF(
+    public Map<String, Double> defineScore(
             List<String> rootArgs,
             List<String> perfectArgs,
             Map<String, List<String>> rootTextHash,
@@ -42,6 +42,7 @@ public class ScoreCalculator {
 
             double lengthNorm = 1.0 - b + b * (docTokens.size() / avgLength);
 
+            // Score com TF + IDF + conceitos de BM25
             for (int i = 0; i < perfectArgs.size(); i++) {
 
                 int tfPerfect = perfectCounts.get(i);

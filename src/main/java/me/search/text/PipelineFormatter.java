@@ -16,6 +16,5 @@ public class PipelineFormatter {
         } else {
             return noStopWordsText;
         }
-
     }
 }

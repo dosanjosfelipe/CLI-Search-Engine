@@ -51,9 +51,7 @@ public class ArgumentParser {
 
 // -------------------- TERMINAL ---------------------
         if (!fileHash.isEmpty()) {
-
-
-            Map<String, Double> score = scoreCalculator.rankingTFIDF(rootArgs, perfectArgs,
+            Map<String, Double> score = scoreCalculator.defineScore(rootArgs, perfectArgs,
                     rootTextHash, perfectTextHash, rootCounter, perfectCounter);
 
             int LIMIT_NAME = 40;
