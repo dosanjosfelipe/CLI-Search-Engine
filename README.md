@@ -1,6 +1,6 @@
 # SearchEngine
 
-SearchEngine é uma ferramenta de linha de comando (CLI) desenvolvida para indexação e busca de termos em documentos locais. O sistema utiliza um algoritmo de pontuação para ranquear arquivos com base na relevância e frequência do assunto pesquisado com uma mistura de ``FT-IDF`` com ``BM25``, permitindo uma recuperação de informações eficiente diretamente pelo terminal.
+SearchEngine é uma ferramenta de linha de comando (CLI) desenvolvida para indexação e busca de termos em documentos locais. O sistema utiliza um algoritmo de pontuação para ranquear arquivos com base na relevância e frequência do assunto pesquisado com uma mistura de ``TF-IDF`` com ``BM25``, permitindo uma recuperação de informações eficiente diretamente pelo terminal.
 
 ## 🚀 Funcionalidades
 
